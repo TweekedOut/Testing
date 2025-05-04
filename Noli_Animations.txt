@@ -1,0 +1,66 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+local function setupAnimations(character)
+    local humanoid = character:WaitForChild("Humanoid")
+
+    -- Disable Animate if present
+    local animate = character:FindFirstChild("Animate")
+    if animate then
+        animate.Disabled = true
+    end
+
+    -- Load custom animations
+    local idleAnim = Instance.new("Animation")
+    idleAnim.AnimationId = "rbxassetid://83465205704188"
+
+    local moveAnim = Instance.new("Animation")
+    moveAnim.AnimationId = "rbxassetid://103292185212679"
+
+    local idleTrack = humanoid:LoadAnimation(idleAnim)
+    local moveTrack = humanoid:LoadAnimation(moveAnim)
+
+    idleTrack.Priority = Enum.AnimationPriority.Action  -- Higher than Core
+    moveTrack.Priority = Enum.AnimationPriority.Movement
+
+    idleTrack:Play()
+
+    RunService.Heartbeat:Connect(function()
+        local speed = humanoid.MoveDirection.Magnitude
+
+        -- Force-stop other idle animations
+        for _, track in pairs(humanoid:GetPlayingAnimationTracks()) do
+            if track.Animation.AnimationId ~= idleAnim.AnimationId
+                and track.Animation.AnimationId ~= moveAnim.AnimationId then
+                if track.Priority == Enum.AnimationPriority.Core
+                    or track.Name == "idle"
+                    or track.Animation.AnimationId:lower():find("idle") then
+                    track:Stop()
+                end
+            end
+        end
+
+        if speed > 0.01 then
+            if not moveTrack.IsPlaying then
+                idleTrack:Stop()
+                moveTrack:Play()
+            end
+        else
+            if not idleTrack.IsPlaying then
+                moveTrack:Stop()
+                idleTrack:Play()
+            end
+        end
+    end)
+end
+
+-- Support for current and future character loads
+if player.Character then
+    setupAnimations(player.Character)
+end
+
+player.CharacterAdded:Connect(setupAnimations)
+
+
